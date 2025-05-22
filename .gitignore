@@ -1,2 +1,3 @@
 cods-lab8/*
-dotfiles/*
+dotfiles/
+*.swp
