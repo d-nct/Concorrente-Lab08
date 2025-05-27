@@ -112,7 +112,7 @@ Total de Primos: 9
 Vencedora: Thread #1
 ```
 
-Note que para que as threads consumidoras identifiquem que a tarefa chegou ao fim (encontraram `n > N`, foi necessário produzir um canal inteiro extra.
+Note que para que as threads consumidoras identifiquem que a tarefa chegou ao fim (encontraram `n > N`), foi necessário produzir um canal inteiro extra.
 Essa foi a minha decisão de projeto consciente.
 
 
