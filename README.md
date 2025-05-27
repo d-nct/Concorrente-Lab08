@@ -33,6 +33,91 @@ Como não é o caso, entendo que gera o overhead da exclusão mútua desnecessar
 
 ## Exemplo de Saída
 
+## `M` É Múltiplo de `N`
+
+Segue um exemplo de execução com os parâmetros:
+
+- 3 threads consumidoras; e
+
+- Verificando os primos até 25; e
+
+- Canal de tamanho 5.
+
+O comando utilizado, portanto, foi `./a.out 3 25 5`
+
+```
+[l:117] Thread 0: Produzi um batch de 5 (até 5).
+[l:148] Thread 1: Iniciando rotina de consumismo.
+[l:168] Thread 1: Verificando n = 1.
+[l:168] Thread 1: Verificando n = 2.
+[l:168] Thread 1: Verificando n = 3.
+[l:168] Thread 1: Verificando n = 4.
+[l:159] Thread 1: Enviando sinal para reabastecer o canal.
+[l:168] Thread 1: Verificando n = 5.
+[l:117] Thread 0: Produzi um batch de 5 (até 10).
+[l:168] Thread 1: Verificando n = 6.
+[l:168] Thread 1: Verificando n = 7.
+[l:168] Thread 1: Verificando n = 8.
+[l:168] Thread 1: Verificando n = 9.
+[l:159] Thread 1: Enviando sinal para reabastecer o canal.
+[l:148] Thread 2: Iniciando rotina de consumismo.
+[l:168] Thread 1: Verificando n = 10.
+[l:117] Thread 0: Produzi um batch de 5 (até 15).
+[l:148] Thread 3: Iniciando rotina de consumismo.
+[l:168] Thread 3: Verificando n = 11.
+[l:168] Thread 3: Verificando n = 12.
+[l:168] Thread 2: Verificando n = 13.
+[l:168] Thread 3: Verificando n = 14.
+[l:159] Thread 2: Enviando sinal para reabastecer o canal.
+[l:168] Thread 2: Verificando n = 15.
+[l:117] Thread 0: Produzi um batch de 5 (até 20).
+[l:168] Thread 1: Verificando n = 16.
+[l:168] Thread 3: Verificando n = 17.
+[l:168] Thread 2: Verificando n = 18.
+[l:168] Thread 1: Verificando n = 19.
+[l:159] Thread 3: Enviando sinal para reabastecer o canal.
+[l:168] Thread 3: Verificando n = 20.
+[l:117] Thread 0: Produzi um batch de 5 (até 25).
+[l:168] Thread 2: Verificando n = 21.
+[l:168] Thread 1: Verificando n = 22.
+[l:168] Thread 3: Verificando n = 23.
+[l:168] Thread 2: Verificando n = 24.
+[l:159] Thread 1: Enviando sinal para reabastecer o canal.
+[l:168] Thread 1: Verificando n = 25.
+[l:174] Thread 1: Encontrei n = 25 == N! Setando terminei = 1.
+[l:196] Thread 1: Fim.
+[l:117] Thread 0: Produzi um batch de 5 (até 30).
+[l:181] Thread 3: Encontrei n = 26 > N! Ignorando.
+[l:196] Thread 3: Fim.
+[l:181] Thread 2: Encontrei n = 27 > N! Ignorando.
+[l:192] Thread 2: Enviando sinal terminal para produtor.
+[l:196] Thread 2: Fim.
+[l:128] Thread 0: Fim.
+
+RESUMO
+------
+Thread #1
+  Avaliados:          14
+  Primos descobertos: 5
+Thread #2
+  Avaliados:          5
+  Primos descobertos: 1
+Thread #3
+  Avaliados:          6
+  Primos descobertos: 3
+
+Total Avaliados: 25
+Total de Primos: 9
+
+Vencedora: Thread #1
+```
+
+Note que para que as threads consumidoras identifiquem que a tarefa chegou ao fim (encontraram `n > N`, foi necessário produzir um canal inteiro extra.
+Essa foi a minha decisão de projeto consciente.
+
+
+## `M` Não É Múltiplo de `N`
+
 Segue um exemplo de execução com os parâmetros:
 
 - 3 threads consumidoras; e
@@ -107,3 +192,7 @@ Total de Primos: 9
 
 Vencedora: Thread #1
 ```
+
+Dessa vez, no final da execução, não foi necessário produzir mais inteiros, mas, de qualquer forma, houve overhead da thread produtora.
+Foram produzidos até `N = 30`, mas foram avaliados apenas `25`.
+Mais uma decisão de projeto consciente.
