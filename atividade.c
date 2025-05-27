@@ -27,9 +27,10 @@
 sem_t produtor, consumidor; // Semaforos para sincronizar a ordem de execucao das threads
 long long int *canal;                // Canal de inteiros de tamanho M
 int pos_in = 0, pos_out = 0;         // Posição mod M do canal (entrada e saída)
-pthread_mutex_t mutex_in, mutex_out; // Variavel de lock para exclusao mutua
+pthread_mutex_t mutex_in, mutex_out, mutex_cons; // Variavel de lock para exclusao mutua
 int num_prod = 1, NTHREADS;
 int terminei = 0;                    // Booleano se a tarefa do programa é finda
+int consumidores_vivos = 0;
 
 // Variáveis recebidas do usuário
 uint num_cons; // Número de threads consumidoras
@@ -101,9 +102,10 @@ void *Produtor (void *threadid) {
   long long int proximo = 1;
 
   // Rotina de produção no canal
-  while (!terminei) {
+  do {
     sem_wait(&produtor); // Espera sua vez
-    
+    if (consumidores_vivos == 0 && terminei) break;
+  
     pthread_mutex_lock(&mutex_in);
     
     // Preenche o canal inteiro. Obs: não tem problema se passar de N!
@@ -112,7 +114,7 @@ void *Produtor (void *threadid) {
     pos_in = (pos_in + 1) % M;
     } while (pos_in % M != 0);
 
-    LOGT("Produzi um batch de %d.\n", 0, M);
+    LOGT("Produzi um batch de %d (até %lld).\n", 0, M, proximo - 1);
 
     pthread_mutex_unlock(&mutex_in);
 
@@ -121,8 +123,7 @@ void *Produtor (void *threadid) {
       sem_post(&consumidor); 
     }
     
-    if (proximo > N) break; // Missão cumprida!
-  }
+  } while (1);
 
   LOGT("Fim.\n", 0);
   pthread_exit(NULL);
@@ -133,6 +134,10 @@ void *Consumidor (void *threadid) {
   long long int atual;
   ret_t *ret = (ret_t*) malloc(sizeof(ret_t));
   if (ret == NULL) {printf("--ERRO: malloc \n"); exit(-2);}
+
+  pthread_mutex_lock(&mutex_cons);
+  consumidores_vivos++;
+  pthread_mutex_unlock(&mutex_cons);
 			
   // Inicializa o Retorno
   ret->id = id;
@@ -164,21 +169,28 @@ void *Consumidor (void *threadid) {
       if (ehPrimo(atual)) ret->qtPrimos++;
       ret->qtAvaliados++;
       
+      // Verifica se foi o último cara
       if (atual == N) { // Último cara
-        LOGT("Encontrei n = %lld == N! Setando terminei = 1\n", id, atual);
-        terminei = 1; // Não é necessário Mutex
+        LOGT("Encontrei n = %lld == N! Setando terminei = 1.\n", id, atual);
+
+        terminei = 1;
+
+        break;
       }
-
-      // Se M é múltiplo de N, é preciso um sinal extra para a produtora
-      // perceber que já gerou os N.
-      /*if (pos_out % M == 0) {*/
-      /*  LOGT("Enviando sinal extra para produtor.\n", id);*/
-      /*  sem_post(&produtor);*/
-      /*}*/
-
-    } else if (atual > N) {
-      LOGT("Encontrei n = %lld > N! Ignorando.\n", id, atual);
+    } else {
+        LOGT("Encontrei n = %lld > N! Ignorando.\n", id, atual);
+      break;
     }
+  }
+
+  pthread_mutex_lock(&mutex_cons);
+  consumidores_vivos--;
+  pthread_mutex_unlock(&mutex_cons);
+
+  // Manda o sinal derradeiro para o produtor se finalizar também
+  if (consumidores_vivos == 0 && terminei == 1) {
+    LOGT("Enviando sinal terminal para produtor.\n", id);
+    sem_post(&produtor);
   }
 
   LOGT("Fim.\n", id);
@@ -216,6 +228,7 @@ int main(int argc, char *argv[]) {
 
   pthread_mutex_init(&mutex_in, NULL);
   pthread_mutex_init(&mutex_out, NULL);
+  pthread_mutex_init(&mutex_cons, NULL);
 
   NTHREADS = num_prod + num_cons;
   tid = (pthread_t*) malloc(NTHREADS * sizeof(pthread_t));
@@ -242,7 +255,7 @@ int main(int argc, char *argv[]) {
 		} 
 	} 
 
-  printf("\n");
+  ENDL;
   printf("RESUMO\n");
   printf("------\n");
   for (t = 1; t < NTHREADS; t++) { // Apenas as consumidoras
@@ -275,6 +288,7 @@ int main(int argc, char *argv[]) {
   free(rets);
   pthread_mutex_destroy(&mutex_in);
   pthread_mutex_destroy(&mutex_out);
+  pthread_mutex_destroy(&mutex_cons);
   sem_destroy(&produtor);
   sem_destroy(&consumidor);
 
