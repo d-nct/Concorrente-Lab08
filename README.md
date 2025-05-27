@@ -43,7 +43,7 @@ Segue um exemplo de execução com os parâmetros:
 
 O comando utilizado, portanto, foi `./a.out 3 25 6`
 
-```bash
+```
 [l:117] Thread 0: Produzi um batch de 6 (até 6).
 [l:148] Thread 1: Iniciando rotina de consumismo.
 [l:168] Thread 1: Verificando n = 1.
